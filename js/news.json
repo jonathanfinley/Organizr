@@ -1,0 +1,23 @@
+[
+  {
+    "title": "Emby Discontinued Support",
+    "subTitle": "Emby API - EmbyConnect Deprecated",
+    "date": "2019-05-14 19:15",
+    "body": "Emby has discontinued support for matching users against Emby Connect via API.  Therefore, we will no longer be supporting this method of Authentication for Organizr.  If Emby decides to support this again, I will re-enable it once more.  You can find more information here: <a href=\"https:\/\/github.com\/MediaBrowser\/Emby\/issues\/3553\" target=\"_blank\">Emby API Discussion<\/a>",
+    "author": "CauseFX"
+  },
+  {
+    "title": "Welcome to Version 2.0",
+    "subTitle": "We finally made it...",
+    "date": "2019-03-01 16:30",
+    "body": "I want to thank all the alpha and beta testers.  It took us awhile but we did it!  I hope you enjoy using Organizr...",
+    "author": "CauseFX"
+  },
+  {
+    "title": "Testing out News Area",
+    "subTitle": null,
+    "date": "2019-02-22 21:40",
+    "body": "There will be news here in the future, thanks for bearing with me in the meantime throughout the v2 beta!",
+    "author": "CauseFX"
+  }
+]
