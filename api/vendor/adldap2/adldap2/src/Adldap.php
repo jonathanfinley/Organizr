@@ -2,20 +2,20 @@
 
 namespace Adldap;
 
-use InvalidArgumentException;
 use Adldap\Log\EventLogger;
-use Adldap\Log\LogsInformation;
-use Adldap\Events\DispatchesEvents;
 use Adldap\Connections\Ldap;
+use InvalidArgumentException;
+use Adldap\Log\LogsInformation;
 use Adldap\Connections\Provider;
+use Adldap\Events\DispatchesEvents;
 use Adldap\Connections\ProviderInterface;
 use Adldap\Connections\ConnectionInterface;
 use Adldap\Configuration\DomainConfiguration;
 
 class Adldap implements AdldapInterface
 {
-    use DispatchesEvents, LogsInformation;
-
+    use DispatchesEvents;
+    use LogsInformation;
     /**
      * The default provider name.
      *
@@ -29,6 +29,17 @@ class Adldap implements AdldapInterface
      * @var array
      */
     protected $providers = [];
+
+    /**
+     * The events to register listeners for during initialization.
+     *
+     * @var array
+     */
+    protected $listen = [
+        'Adldap\Auth\Events\*',
+        'Adldap\Query\Events\*',
+        'Adldap\Models\Events\*',
+    ];
 
     /**
      * {@inheritdoc}
@@ -132,7 +143,7 @@ class Adldap implements AdldapInterface
     public function connect($name = null, $username = null, $password = null)
     {
         $provider = $name ? $this->getProvider($name) : $this->getDefaultProvider();
-        
+
         return $provider->connect($username, $password);
     }
 
@@ -142,10 +153,8 @@ class Adldap implements AdldapInterface
     public function __call($method, $parameters)
     {
         $provider = $this->getDefaultProvider();
-
-        if (!$provider->getConnection()->isBound()) {
-            // We'll make sure we have a bound connection before
-            // allowing dynamic calls on the default provider.
+        
+        if (! $provider->getConnection()->isBound()) {
             $provider->connect();
         }
 
@@ -163,17 +172,14 @@ class Adldap implements AdldapInterface
 
         $logger = $this->newEventLogger();
 
-        $dispatcher->listen('Adldap\Auth\Events\*', function ($eventName, $events) use ($logger) {
-            foreach ($events as $event) {
-                $logger->auth($event);
-            }
-        });
-
-        $dispatcher->listen('Adldap\Models\Events\*', function ($eventName, $events) use ($logger) {
-            foreach ($events as $event) {
-                $logger->model($event);
-            }
-        });
+        // We will go through each of our event wildcards and register their listener.
+        foreach ($this->listen as $event) {
+            $dispatcher->listen($event, function ($eventName, $events) use ($logger) {
+                foreach ($events as $event) {
+                    $logger->log($event);
+                }
+            });
+        }
     }
 
     /**

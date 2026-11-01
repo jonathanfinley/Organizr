@@ -1,5 +1,14 @@
 <?php
-$pageWizard = '
+$GLOBALS['organizrPages'][] = 'settings_wizard';
+function get_page_wizard($Organizr)
+{
+	if (!$Organizr) {
+		$Organizr = new Organizr();
+	}
+	$suggestedDirectory = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . $Organizr->random_ascii_string(10) . DIRECTORY_SEPARATOR;
+	$mysqliDisabled = extension_loaded('mysqli') ? '' : 'disabled';
+	$mysqliLabel = extension_loaded('mysqli') ? '' : ' [PHP module not installed]';
+	return '
 <script>
     (function() {
         $(\'#adminValidator\').wizard({
@@ -18,8 +27,8 @@ $pageWizard = '
                                     message: \'The username must be more than 2 and less than 30 characters long\'
                                 },
                                 regexp: {
-                                    regexp: /^[a-zA-Z0-9_\.]+$/,
-                                    message: \'The username can only consist of alphabetical, number, dot and underscore\'
+                                    regexp: /^[a-zA-Z0-9_\.\@]+$/,
+                                    message: \'The username can only consist of alphabetical, number, at sign, dot and underscore\'
                                 }
                             }
                         },
@@ -53,7 +62,7 @@ $pageWizard = '
                                 }
                             }
                         },
-                        location: {
+                        dbPath: {
                             validators: {
                                 notEmpty: {
                                     message: \'The database location is required\'
@@ -121,31 +130,24 @@ $pageWizard = '
                 return true;
             },
             onFinish: function() {
-                //$(\'#validation\').submit();
-                var post = $( \'#validation\' ).serializeArray();
-                console.log( post );
-                organizrAPI(\'POST\',\'api/?v1/wizard_config\',post).success(function(data) {
-            		var html = JSON.parse(data);
-                    if(html.data == true){
-                        location.reload();
-                    }else if(html.data == \'token\'){
-                        message("",window.lang.translate(\'Could not create Token\'),activeInfo.settings.notifications.position,"#FFF","error","3500");
-						console.error(\'Organizr Function: Could not create Token\');
-					}else if(html.data == \'db\'){
-						message("",window.lang.translate(\'Could not create DB - check permissions\'),activeInfo.settings.notifications.position,"#FFF","error","3500");
-						console.error(\'Organizr Function: Could not create DB - check permissions\');
-					}else if(html.data == \'admin\'){
-						message("",window.lang.translate(\'Could not create admin acct\'),activeInfo.settings.notifications.position,"#FFF","error","3500");
-						console.error(\'Organizr Function: Could not create admin acct\');
-					}else if(html.data == \'config\'){
-						message("",window.lang.translate(\'Could not create config files - check permissions\'),activeInfo.settings.notifications.position,"#FFF","error","3500");
-						console.error(\'Organizr Function: Could not create config files - check permissions\');
-					}else{
-						message("",window.lang.translate(\'Sign-up Error Occurred\'),activeInfo.settings.notifications.position,"#FFF","error","3500");
-                        console.error(\'Organizr Function: Sign-up Error Occurred\');
-                    }
+                message("Submitting Wizard");
+                $(\'.white-box\').block({
+				    message: \'<h3><i class="fa fa-close"></i> Submitting Wizard Data...</h3>\',
+				    css: {
+					    color: \'#fff\',
+					    border: \'1px solid #1b1a1a\',
+					    backgroundColor: \'#2cabe3\'
+				    }
+				});
+                var post = $( \'#validation\' ).serializeToJSON();
+                organizrAPI2(\'POST\',\'api/v2/wizard\',post).success(function(data) {
+            		var html = data.response;
+            		message("Wizard Data accepted");
+            		$(\'.white-box\').unblock({});
+                    location.reload();
             	}).fail(function(xhr) {
-            		console.error("Organizr Function: Connection Failed");
+            	    OrganizrApiError(xhr, \'API Error\');
+            	    $(\'.white-box\').unblock({});
             	});
             }
         });
@@ -157,6 +159,42 @@ $pageWizard = '
                 $(\'#verify-\'+name).text(value);
             }
         });
+        $(document).on("click", ".wizard-test-database-connection", function() {
+            message("Checking Connection","",activeInfo.settings.notifications.position,"#FFF","info","10000");
+			let post = $( \'#validation\' ).serializeToJSON();
+			organizrAPI2(\'POST\',\'api/v2/test/database\',post).success(function(data) {
+				try {
+					let response = data.response;
+					messageSingle(response.message,"",activeInfo.settings.notifications.position,"#FFF","success","10000");
+				}catch(e) {
+					organizrCatchError(e,data);
+				}
+			}).fail(function(xhr) {
+				OrganizrApiError(xhr, "API Error");
+			})
+		});
+		$(document).on("click", ".database-driver-selector", function () {
+			$("#form-dbHost").parent().parent().toggleClass("hidden");
+			$("#form-dbUsername").parent().parent().toggleClass("hidden");
+			$("#form-dbPassword").parent().parent().toggleClass("hidden");
+			$(".wizard-test-database-connection").parent().toggleClass("hidden");
+			let path = $(".wizard-suggested-path").html();
+			$("#form-dbPath").focus();
+			$("#form-dbPath").val(path);
+			$("#form-dbPath").focusout();
+			$("#verify-dbPath").text(path);
+			$("#verify-driver").text($(this).val());
+			$("#form-dbHost").focus();
+			message("Using MySQLi","Database Path becomes path for logs etc.. (Still configurable)",activeInfo.settings.notifications.position,"#FFF","info","10000");
+		});
+		$(document).on("click", ".copy-dbPath", function () {
+			let path = $(this).attr("data-clipboard-text");
+			$("#form-dbPath").focus();
+			$("#form-dbPath").val(path);
+			$("#form-dbPath").focusout();
+			$("#verify-dbPath").text(path);
+			$("#form-dbName").focus();
+		});
     })();
 </script>
 <div class="container-fluid">
@@ -258,8 +296,8 @@ $pageWizard = '
                                     </div>
                                     <div class="panel-wrapper collapse in" aria-expanded="true">
                                         <div class="panel-body">
-                                            <p lang="en">The Hash Key will be used to decrypt all passwords etc... on the server. {User-Generated]</p>
-                                            <p lang="en">The Registration Password will lockout the registration field with this password. {User-Generated]</p>
+                                            <p lang="en">The Hash Key will be used to decrypt all passwords etc... on the server. [User-Generated]</p>
+                                            <p lang="en">The Registration Password will lockout the registration field with this password. [User-Generated]</p>
                                             <p lang="en">The API Key will be used for all calls to organizr for the UI. [Auto-Generated]</p>
                                         </div>
                                     </div>
@@ -295,11 +333,52 @@ $pageWizard = '
                                     <div class="panel-wrapper collapse in" aria-expanded="true">
                                         <div class="panel-body">
                                             <p lang="en">The Database will contain sensitive information.  Please place in directory outside of root Web Directory.</p>
-                                            <p lang="en">Suggested Directory: <code>' . dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'db</code> <a class="btn default btn-outline clipboard p-a-5" data-clipboard-text="' . dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'db" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
-                                            <p lang="en">Current Directory: <code>' . dirname(__DIR__, 2) . '</code> <a class="btn default btn-outline clipboard p-a-5" data-clipboard-text="' . dirname(__DIR__, 2) . '" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
-                                            <p lang="en">Parent Directory: <code>' . dirname(__DIR__, 3) . '</code> <a class="btn default btn-outline clipboard p-a-5" data-clipboard-text="' . dirname(__DIR__, 3) . '" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
+                                            <p lang="en">Suggested Directory: <code class="wizard-suggested-path">' . $suggestedDirectory . '</code> <a class="btn default btn-outline clipboard copy-dbPath p-a-5" data-clipboard-text="' . $suggestedDirectory . '" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
+                                            <p lang="en">Current Directory: <code>' . dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . '</code> <a class="btn default btn-outline clipboard copy-dbPath p-a-5" data-clipboard-text="' . dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . '" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
+                                            <p lang="en">Parent Directory: <code>' . dirname(__DIR__, 3) . '</code> <a class="btn default btn-outline clipboard copy-dbPath p-a-5" data-clipboard-text="' . dirname(__DIR__, 3) . '" href="javascript:void(0);"><i class="ti-clipboard"></i></a></p>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="form-group">
+									<label class="control-label" lang="en">Database Driver</label>
+									<div class="radio-list">
+										<label class="radio-inline p-0">
+											<div class="radio radio-info">
+												<input type="radio" class="database-driver-selector" name="driver" id="db-driver-sqlite3" value="sqlite3" checked="checked">
+												<label for="db-driver-sqlite3">sqlite3</label>
+											</div>
+										</label>
+										<label class="radio-inline  p-0">
+											<div class="radio radio-info">
+												<input type="radio" class="database-driver-selector" name="driver" id="db-driver-mysqli" value="mysqli" ' . $mysqliDisabled . '>
+												<label for="db-driver-mysqli">mysqli' . $mysqliLabel . '</label>
+											</div>
+										</label>
+									</div>
+								</div>
+								<div class="form-group hidden">
+                                    <label for="dbHost" lang="en">Database Host</label>
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="ti-server"></i></div>
+                                        <input type="text" class="form-control wizardInput" name="dbHost" id="form-dbHost" placeholder="host and/or port">
+                                    </div>
+                                </div>
+                                <div class="form-group hidden">
+                                    <label for="dbUsername" lang="en">Database Username</label>
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="ti-server"></i></div>
+                                        <input type="text" class="form-control wizardInput" name="dbUsername" id="form-dbUsername" placeholder="">
+                                    </div>
+                                </div>
+                                <div class="form-group hidden">
+                                    <label for="dbPassword" lang="en">Database Password</label>
+                                    <div class="input-group">
+                                        <div class="input-group-addon"><i class="ti-server"></i></div>
+                                        <input type="password" class="form-control wizardInput" name="dbPassword" id="form-dbPassword" placeholder="">
+                                    </div>
+                                </div>
+                                <div class="form-group hidden">
+                                    <button class="btn btn-block btn-info wizard-test-database-connection" lang="en">Test Database Connection</button>
                                 </div>
                                 <div class="form-group">
                                     <label for="dbName" lang="en">Database Name</label>
@@ -309,10 +388,10 @@ $pageWizard = '
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="location" lang="en">Database Location</label>
+                                    <label for="dbPath" lang="en">Database Location</label>
                                     <div class="input-group">
                                         <div class="input-group-addon"><i class="ti-server"></i></div>
-                                        <input type="text" class="form-control wizardInput" name="location" id="form-location" placeholder="Enter path or copy from above">
+                                        <input type="text" class="form-control wizardInput" name="dbPath" id="form-dbPath" placeholder="Enter path or copy from above">
                                         <span class="input-group-btn"><button class="btn btn-info testPath" lang="en" type="button">Test / Create Path</button></span>
                                     </div>
                                 </div>
@@ -346,6 +425,18 @@ $pageWizard = '
                                                 </p>
                                             </div>
                                         </div>
+                                        <div class="form-group">
+                                            <label class="control-label col-md-3" lang="en">Database Location:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static" id="verify-dbPath">  </p>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="control-label col-md-3" lang="en">Database Name:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static" id="verify-dbName">  </p>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -373,15 +464,30 @@ $pageWizard = '
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="control-label col-md-3" lang="en">Database Location:</label>
+                                            <label class="control-label col-md-3" lang="en">Database Driver:</label>
                                             <div class="col-md-9">
-                                                <p class="form-control-static" id="verify-location">  </p>
+                                                <p class="form-control-static" id="verify-driver">sqlite3</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label class="control-label col-md-3" lang="en">Database Host:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static" id="verify-dbHost">Not used...</p>
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="control-label col-md-3" lang="en">Database Name:</label>
+                                            <label class="control-label col-md-3" lang="en">Database Username:</label>
                                             <div class="col-md-9">
-                                                <p class="form-control-static" id="verify-dbName">  </p>
+                                                <p class="form-control-static" id="verify-dbUsername">Not used...</p>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="control-label col-md-3" lang="en">Database Password:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static">
+                                                    <a class="mytooltip" href="javascript:void(0)"> <span lang="en">Hover to show </span><span class="tooltip-content5"><span class="tooltip-text3"><span class="tooltip-inner2" id="verify-dbPassword">Not used...</span></span></span></a>
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -399,3 +505,4 @@ $pageWizard = '
 </div>
 <!-- /.container-fluid -->
 ';
+}

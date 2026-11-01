@@ -1,192 +1,248 @@
 <?php
-// Upgrade the installation
-function upgradeInstall($branch = 'v2-master', $stage)
-{
-	$notWritable = array_search(false, pathsWritable($GLOBALS['paths']));
-	if ($notWritable == false) {
-		ini_set('max_execution_time', 0);
-		set_time_limit(0);
-		$url = 'https://github.com/causefx/Organizr/archive/' . $branch . '.zip';
-		$file = "upgrade.zip";
-		$source = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upgrade' . DIRECTORY_SEPARATOR . 'Organizr-' . str_replace('v2', '2', $branch) . DIRECTORY_SEPARATOR;
-		$cleanup = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . "upgrade" . DIRECTORY_SEPARATOR;
-		$destination = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
-		switch ($stage) {
-			case '1':
-				writeLog('success', 'Update Function -  Started Upgrade Process', $GLOBALS['organizrUser']['username']);
-				if (downloadFile($url, $file)) {
-					writeLog('success', 'Update Function -  Downloaded Update File for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return true;
-				} else {
-					writeLog('error', 'Update Function -  Downloaded Update File Failed  for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return false;
-				}
-				break;
-			case '2':
-				if (unzipFile($file)) {
-					writeLog('success', 'Update Function -  Unzipped Update File for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return true;
-				} else {
-					writeLog('error', 'Update Function -  Unzip Failed for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return false;
-				}
-				break;
-			case '3':
-				if (rcopy($source, $destination)) {
-					writeLog('success', 'Update Function -  Overwrited Files using Updated Files from Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					$updateComplete = $GLOBALS['dbLocation'] . 'completed.txt';
-					if (!file_exists($updateComplete)) {
-						touch($updateComplete);
-					}
-					return true;
-				} else {
-					writeLog('error', 'Update Function -  Overwrite Failed for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return false;
-				}
-				break;
-			case '4':
-				if (rrmdir($cleanup)) {
-					writeLog('success', 'Update Function -  Deleted Update Files from Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					writeLog('success', 'Update Function -  Update Completed', $GLOBALS['organizrUser']['username']);
-					return true;
-				} else {
-					writeLog('error', 'Update Function -  Removal of Update Files Failed for Branch: ' . $branch, $GLOBALS['organizrUser']['username']);
-					return false;
-				}
-				break;
-			default:
-				return false;
-				break;
-		}
-	} else {
-		return 'permissions';
-	}
-	
-}
 
-function downloadFile($url, $path)
+trait UpdateFunctions
 {
-	ini_set('max_execution_time', 0);
-	set_time_limit(0);
-	$folderPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . "upgrade" . DIRECTORY_SEPARATOR;
-	if (!file_exists($folderPath)) {
-		if (@!mkdir($folderPath)) {
-			writeLog('error', 'Update Function -  Folder Creation failed', $GLOBALS['organizrUser']['username']);
+	public function testScriptFilePermissions($script, $retest = false)
+	{
+		if (file_exists($script)) {
+			if (is_executable($script)) {
+				return true;
+			} elseif (!$retest) {
+				$this->setLoggerChannel('Update')->notice('Attempting to set correct permissions', ['file' => $script]);
+				$permissions = shell_exec('chmod 777 ' . $script);
+				return $this->testScriptFilePermissions($script, true);
+			} else {
+				$this->setLoggerChannel('Update')->warning('Update script doesn\'t have the correct permissions', ['file' => $script]);
+				return false;
+			}
+		} else {
+			$this->setLoggerChannel('Update')->warning('Update script doesn\'t exist', ['file' => $script]);
 			return false;
 		}
 	}
-	$newfname = $folderPath . $path;
-	$file = fopen($url, 'rb');
-	if ($file) {
-		$newf = fopen($newfname, 'wb');
-		if ($newf) {
-			while (!feof($file)) {
-				fwrite($newf, fread($file, 1024 * 8), 1024 * 8);
-			}
-		}
-	} else {
-		//writeLog("error", "organizr could not download $url");
-	}
-	if ($file) {
-		fclose($file);
-		//writeLog("success", "organizr finished downloading the github zip file");
-	} else {
-		//writeLog("error", "organizr could not download the github zip file");
-	}
-	if ($newf) {
-		fclose($newf);
-		//writeLog("success", "organizr created upgrade zip file from github zip file");
-	} else {
-		//writeLog("error", "organizr could not create upgrade zip file from github zip file");
-	}
-	return true;
-}
 
-function downloadFileToPath($from, $to, $path)
-{
-	ini_set('max_execution_time', 0);
-	set_time_limit(0);
-	if (@!mkdir($path, 0777, true)) {
-		//writeLog("error", "organizr could not create upgrade folder");
-	}
-	$file = fopen($from, 'rb');
-	if ($file) {
-		$newf = fopen($to, 'wb');
-		if ($newf) {
-			while (!feof($file)) {
-				fwrite($newf, fread($file, 1024 * 8), 1024 * 8);
-			}
+	public function updateOrganizr()
+	{
+		if ($this->docker) {
+			return $this->dockerUpdate();
+		} elseif ($this->getOS() == 'win') {
+			return $this->windowsUpdate();
+		} else {
+			return $this->linuxUpdate();
 		}
-	} else {
-		//writeLog("error", "organizr could not download $url");
 	}
-	if ($file) {
-		fclose($file);
-		//writeLog("success", "organizr finished downloading the github zip file");
-	} else {
-		//writeLog("error", "organizr could not download the github zip file");
-	}
-	if ($newf) {
-		fclose($newf);
-		//writeLog("success", "organizr created upgrade zip file from github zip file");
-	} else {
-		//writeLog("error", "organizr could not create upgrade zip file from github zip file");
-	}
-	return true;
-}
 
-function unzipFile($zipFile)
-{
-	ini_set('max_execution_time', 0);
-	set_time_limit(0);
-	$zip = new ZipArchive;
-	$extractPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . "upgrade/";
-	if ($zip->open($extractPath . $zipFile) != "true") {
-		//writeLog("error", "organizr could not unzip upgrade.zip");
-	} else {
-		//writeLog("success", "organizr unzipped upgrade.zip");
+	public function createUpdateStatusFile()
+	{
+		$file = $this->config['dbLocation'] . 'updateInProgress.txt';
+		touch($file);
+		return true;
 	}
-	/* Extract Zip File */
-	$zip->extractTo($extractPath);
-	$zip->close();
-	return true;
-}
 
-// Function to remove folders and files
-function rrmdir($dir)
-{
-	ini_set('max_execution_time', 0);
-	set_time_limit(0);
-	if (is_dir($dir)) {
-		$files = scandir($dir);
-		foreach ($files as $file) {
-			if ($file != "." && $file != "..") {
-				rrmdir("$dir/$file");
-			}
+	public function removeUpdateStatusFile()
+	{
+		$file = $this->config['dbLocation'] . 'updateInProgress.txt';
+		if (file_exists($file)) {
+			@unlink($file);
 		}
-		rmdir($dir);
-	} elseif (file_exists($dir)) {
-		unlink($dir);
+		return true;
 	}
-	return true;
-}
 
-// Function to Copy folders and files
-function rcopy($src, $dst)
-{
-	ini_set('max_execution_time', 0);
-	set_time_limit(0);
-	if (is_dir($src)) {
-		if (!file_exists($dst)) : mkdir($dst);
-		endif;
-		$files = scandir($src);
-		foreach ($files as $file) {
-			if ($file != "." && $file != "..") {
-				rcopy("$src/$file", "$dst/$file");
-			}
-		}
-	} elseif (file_exists($src)) {
-		copy($src, $dst);
+	public function hasUpdateStatusFile()
+	{
+		return file_exists($this->config['dbLocation'] . 'updateInProgress.txt');
 	}
-	return true;
+
+	public function checkForGitLockFile()
+	{
+		return file_exists($this->root . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR . 'index.lock');
+	}
+
+	public function removeGitLockFile()
+	{
+		if ($this->checkForGitLockFile()) {
+			$removed = false;
+			if (@unlink($this->root . DIRECTORY_SEPARATOR . '.git' . DIRECTORY_SEPARATOR . 'index.lock')) {
+				$removed = true;
+			}
+			return $removed;
+		}
+		return true;
+	}
+
+	public function dockerUpdate()
+	{
+		if (!$this->docker) {
+			$this->setResponse(409, 'Your install type is not Docker');
+			return false;
+		}
+		if ($this->hasUpdateStatusFile()) {
+			$this->setResponse(500, 'Already Update in progress');
+			return false;
+		} else {
+			$this->createUpdateStatusFile();
+		}
+		if (!$this->removeGitLockFile()) {
+			$this->setResponse(500, 'Git Lock file was found and could not be removed.  Please remove manually');
+			return false;
+		}
+		$dockerUpdate = null;
+		ini_set('max_execution_time', 0);
+		set_time_limit(0);
+		chdir('/etc/cont-init.d/');
+		if (file_exists('./30-install')) {
+			$this->setAPIResponse('error', 'Update failed - OrgTools is deprecated - please use organizr/organizr', 500);
+			return false;
+		} elseif (file_exists('./40-install')) {
+			$dockerUpdate = shell_exec('./40-install');
+		}
+		$this->removeUpdateStatusFile();
+		if ($dockerUpdate) {
+			$this->setAPIResponse('success', $dockerUpdate, 200);
+			return true;
+		} else {
+			$this->setAPIResponse('error', 'Update failed', 500);
+			return false;
+		}
+	}
+
+	public function windowsUpdate()
+	{
+		if ($this->docker || $this->getOS() !== 'win') {
+			$this->setResponse(409, 'Your install type is not Windows');
+			return false;
+		}
+		if ($this->hasUpdateStatusFile()) {
+			$this->setResponse(500, 'Already Update in progress');
+			return false;
+		} else {
+			$this->createUpdateStatusFile();
+		}
+		$branch = ($this->config['branch'] == 'v2-master') ? '-m' : '-d';
+		ini_set('max_execution_time', 0);
+		set_time_limit(0);
+		$logFile = $this->root . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'log.txt';
+		$windowsScript = $this->root . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'windows-update.bat ' . $branch . ' > ' . $logFile . ' 2>&1';
+		$windowsUpdate = shell_exec($windowsScript);
+		$this->removeUpdateStatusFile();
+		if ($windowsUpdate) {
+			$this->setAPIResponse('success', $windowsUpdate, 200);
+			return true;
+		} else {
+			$this->setAPIResponse('success', 'Update Complete - check log.txt for output', 200);
+			return false;
+		}
+	}
+
+	public function linuxUpdate()
+	{
+		if ($this->docker || $this->getOS() == 'win') {
+			$this->setResponse(409, 'Your install type is not Linux');
+			return false;
+		}
+		if ($this->hasUpdateStatusFile()) {
+			$this->setResponse(500, 'Already Update in progress');
+			return false;
+		} else {
+			$this->createUpdateStatusFile();
+		}
+		$branch = $this->config['branch'];
+		ini_set('max_execution_time', 0);
+		set_time_limit(0);
+		$logFile = $this->root . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'log.txt';
+		$script = $this->root . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'linux-update.sh';
+		$scriptExec = $script . ' ' . $branch . ' > ' . $logFile . ' 2>&1';
+		$checkScript = $this->testScriptFilePermissions($script);
+		if (!$checkScript) {
+			$this->setResponse(500, 'Update script permissions error');
+			$this->removeUpdateStatusFile();
+			return false;
+		}
+		$update = shell_exec($scriptExec);
+		$this->removeUpdateStatusFile();
+		if ($update) {
+			$this->setAPIResponse('success', $update, 200);
+			return true;
+		} else {
+			$this->setAPIResponse('success', 'Update Complete - check log.txt for output', 200);
+			return false;
+		}
+	}
+
+	public function upgradeInstall($branch = 'v2-master', $stage = '1')
+	{
+		// may kill this function in place for php script to run elsewhere
+		if ($this->docker) {
+			$this->setAPIResponse('error', 'Cannot perform update action on docker install - use script', 500);
+			return false;
+		}
+		if ($this->getOS() == 'win') {
+			$this->setAPIResponse('error', 'Cannot perform update action on windows install - use script', 500);
+			return false;
+		}
+		$notWritable = array_search(false, $this->pathsWritable($this->paths));
+		if ($notWritable == false) {
+			ini_set('max_execution_time', 0);
+			set_time_limit(0);
+			$url = 'https://github.com/causefx/Organizr/archive/' . $branch . '.zip';
+			$file = "upgrade.zip";
+			$source = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upgrade' . DIRECTORY_SEPARATOR . 'Organizr-' . str_replace('v2', '2', $branch) . DIRECTORY_SEPARATOR;
+			$cleanup = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . "upgrade" . DIRECTORY_SEPARATOR;
+			$destination = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
+			switch ($stage) {
+				case '1':
+					$this->setLoggerChannel('Update')->info('Started Upgrade Process');
+					if ($this->downloadFile($url, $file)) {
+						$this->setLoggerChannel('Update')->info('Downloaded Update File for Branch: ' . $branch);
+						$this->setAPIResponse('success', 'Downloaded file successfully', 200);
+						return true;
+					} else {
+						$this->setLoggerChannel('Update')->warning('Downloaded Update File Failed for Branch: ' . $branch);
+						$this->setAPIResponse('error', 'Download failed', 500);
+						return false;
+					}
+				case '2':
+					if ($this->unzipFile($file)) {
+						$this->setLoggerChannel('Update')->info('Unzipped Update File for Branch: ' . $branch);
+						$this->setAPIResponse('success', 'Unzipped file successfully', 200);
+						return true;
+					} else {
+						$this->setLoggerChannel('Update')->warning('Unzip Failed for Branch: ' . $branch);
+						$this->setAPIResponse('error', 'Unzip failed', 500);
+						return false;
+					}
+				case '3':
+					if ($this->rcopy($source, $destination)) {
+						$this->setLoggerChannel('Update')->info('Files overwritten using Updated Files from Branch: ' . $branch);
+						$updateComplete = $this->config['dbLocation'] . 'completed.txt';
+						if (!file_exists($updateComplete)) {
+							touch($updateComplete);
+						}
+						$this->setAPIResponse('success', 'Files replaced successfully', 200);
+						return true;
+					} else {
+						$this->setLoggerChannel('Update')->warning('Overwrite Failed for Branch: ' . $branch);
+						$this->setAPIResponse('error', 'File replacement failed', 500);
+						return false;
+					}
+				case '4':
+					if ($this->rrmdir($cleanup)) {
+						$this->setLoggerChannel('Update')->info('Deleted Update Files from Branch: ' . $branch);
+						$this->setLoggerChannel('Update')->info('Update Completed');
+						$this->setAPIResponse('success', 'Removed update files successfully', 200);
+						return true;
+					} else {
+						$this->setLoggerChannel('Update')->warning('Removal of Update Files Failed for Branch: ' . $branch);
+						$this->setAPIResponse('error', 'File removal failed', 500);
+						return false;
+					}
+				default:
+					$this->setAPIResponse('error', 'Action not setup', 500);
+					return false;
+			}
+		} else {
+			$this->setAPIResponse('error', 'File permissions not set correctly', 500);
+			return false;
+		}
+	}
 }

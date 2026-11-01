@@ -10,14 +10,16 @@ class Sonarr
     protected $apiKey;
     protected $httpAuthUsername;
     protected $httpAuthPassword;
+    public $options;
 
-    public function __construct($url, $apiKey, $lidarr = false, $httpAuthUsername = null, $httpAuthPassword = null)
+    public function __construct($url, $apiKey, $type = 'sonarr', $httpAuthUsername = null, $httpAuthPassword = null, $options = [])
     {
         $this->url = rtrim($url, '/\\'); // Example: http://127.0.0.1:8989 (no trailing forward-backward slashes)
 	    $this->apiKey = $apiKey;
-	    $this->lidarr = $lidarr;
+	    $this->type = strtolower($type);
         $this->httpAuthUsername = $httpAuthUsername;
-        $this->httpAuthPassword = $httpAuthPassword;
+	    $this->httpAuthPassword = $httpAuthPassword;
+	    $this->options = $options;
     }
 
     /**
@@ -65,8 +67,11 @@ class Sonarr
         if ( $sonarrUnmonitored == 'true' ) {
             $uriData['unmonitored'] = 'true';
 		}
-	    if ( $this->lidarr == true ) {
+	    if ( $this->type == 'lidarr' ) {
 		    $uriData['includeArtist'] = 'true';
+	    }
+	    if ( $this->type == 'sonarr' ) {
+		    $uriData['includeSeries'] = 'true';
 	    }
 	    $response = [
             'uri' => 'calendar',
@@ -334,8 +339,15 @@ class Sonarr
         $response = [
             'uri' => $uri,
             'type' => 'get',
-            'data' => []
+            'data' => [
+            	'includeUnknownSeriesItems' => 'false',
+	            'pageSize' => 1000
+            ]
         ];
+	    if ( $this->type == 'sonarr' ) {
+		    $response['data']['includeSeries'] = 'true';
+		    $response['data']['includeEpisode'] = 'true';
+	    }
 
         return $this->processRequest($response);
     }
@@ -593,7 +605,7 @@ class Sonarr
      */
     protected function _request(array $params)
     {
-        $client = new Client(['verify' => getCert()]);
+        $client = new Client($this->options);
         $options = [
             'headers' => [
                 'X-Api-Key' => $this->apiKey
@@ -606,29 +618,33 @@ class Sonarr
                 $this->httpAuthPassword
             ];
         }
-	    $lidarr = ( $this->lidarr == true ) ? 'v1/' : '';
+		if($this->type == 'lidarr'){
+			$params['version'] = 'v1/';
+		}
+	    $version = $params['version'] ?? '';
+        
         if ( $params['type'] == 'get' ) {
-            $url = $this->url . '/api/' . $lidarr . $params['uri'] . '?' . http_build_query($params['data']);
+            $url = $this->url . '/api/' . $version . $params['uri'] . '?' . http_build_query($params['data']);
 
             return $client->get($url, $options);
         }
 
         if ( $params['type'] == 'put' ) {
-            $url = $this->url . '/api/' . $lidarr . $params['uri'];
+            $url = $this->url . '/api/' . $version . $params['uri'];
             $options['json'] = $params['data'];
 
             return $client->put($url, $options);
         }
 
         if ( $params['type'] == 'post' ) {
-            $url = $this->url . '/api/' . $lidarr . $params['uri'];
+            $url = $this->url . '/api/' . $version . $params['uri'];
             $options['json'] = $params['data'];
 
             return $client->post($url, $options);
         }
 
         if ( $params['type'] == 'delete' ) {
-            $url = $this->url . '/api/' . $lidarr . $params['uri'] . '?' . http_build_query($params['data']);
+            $url = $this->url . '/api/' . $version . $params['uri'] . '?' . http_build_query($params['data']);
 
             return $client->delete($url, $options);
         }
@@ -642,12 +658,36 @@ class Sonarr
      */
     protected function processRequest(array $request)
     {
+	    try {
+		    switch ($this->type){
+			    case 'sonarr':
+				    $versionCheck = 'v3/';
+				    break;
+			    case 'radarr':
+			    	$versionCheck =  'v3/';
+			    	break;
+			    case 'lidarr':
+				    $versionCheck = 'v1/';
+				    break;
+			    default:
+				    $versionCheck = '';
+		    }
+	    } catch ( \Exception $e ) {
+		    return json_encode(array(
+			    'error' => array(
+				    'msg' => $e->getMessage(),
+				    'code' => $e->getCode(),
+			    ),
+		    ));
+		    exit();
+	    }
         try {
             $response = $this->_request(
                 [
                     'uri' => $request['uri'],
                     'type' => $request['type'],
-                    'data' => $request['data']
+                    'data' => $request['data'],
+	                'version' => $versionCheck
                 ]
             );
         } catch ( \Exception $e ) {
@@ -657,7 +697,6 @@ class Sonarr
                     'code' => $e->getCode(),
                 ),
             ));
-
             exit();
         }
 

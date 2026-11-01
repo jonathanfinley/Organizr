@@ -1,129 +1,104 @@
 <?php
-if(file_exists('config'.DIRECTORY_SEPARATOR.'config.php')){
-    $pageSettingsSettingsLogs = '
-    <script>
-    $(document).on("click", ".swapLog", function(e) {
-        var log = $(this).attr(\'data-name\')+\'Div\';
-        $(\'.logTable\').addClass(\'hidden\');
-        $(\'.\'+log).addClass(\'show\').removeClass(\'hidden\');
-    	$(\'.swapLog\').removeClass(\'active\');
-    	$(this).addClass(\'active\');
-    });
-    </script>
-    <div class="btn-group m-b-20 pull-left">
-        <button type="button" class="btn btn-default btn-outline waves-effect bg-org swapLog active" data-name="loginLog" data-path="'.$GLOBALS['organizrLoginLog'].'" lang="en">Login Log</button>
-        <button type="button" class="btn btn-default btn-outline waves-effect bg-org swapLog" data-name="orgLog" data-path="'.$GLOBALS['organizrLog'].'" lang="en">Organizr Log</button>
-    </div>
-    <button class="btn btn-danger btn-sm waves-effect waves-light pull-right purgeLog" type="button"><span class="btn-label"><i class="fa fa-trash"></i></span>Purge Log</button>
-    <div class="clearfix"></div>
-    <div class="white-box bg-org logTable loginLogDiv">
-        <h3 class="box-title m-b-0" lang="en">Login Logs</h3>
-        <div class="table-responsive">
-            <table id="loginLogTable" class="table table-striped">
-                <thead>
-                    <tr>
-                        <th lang="en">Date</th>
-                        <th lang="en">Username</th>
-                        <th lang="en">IP Address</th>
-                        <th lang="en">Type</th>
-                    </tr>
-                </thead>
-    			<tfoot>
-                    <tr>
-                        <th lang="en">Date</th>
-                        <th lang="en">Username</th>
-                        <th lang="en">IP Address</th>
-                        <th lang="en">Type</th>
-                    </tr>
-                </tfoot>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-    <div class="white-box bg-org logTable orgLogDiv hidden">
-        <h3 class="box-title m-b-0" lang="en">Organizr Logs</h3>
-        <div class="table-responsive">
-            <table id="organizrLogTable" class="table table-striped">
-                <thead>
-                    <tr>
-                        <th lang="en">Date</th>
-                        <th lang="en">Username</th>
-                        <th lang="en">IP Address</th>
-                        <th lang="en">Message</th>
-                        <th lang="en">Type</th>
-                    </tr>
-                </thead>
-                <tfoot>
-                    <tr>
-                        <th lang="en">Date</th>
-                        <th lang="en">Username</th>
-                        <th lang="en">IP Address</th>
-                        <th lang="en">Message</th>
-                        <th lang="en">Type</th>
-                    </tr>
-                </tfoot>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-    <!-- /.container-fluid -->
-    <script>
-    //$.fn.dataTable.moment(\'DD-MMM-Y HH:mm:ss\');
-    $("#loginLogTable").DataTable( {
-            "ajax": "api/?v1/login_log",
-            "columns": [
-                { data: \'utc_date\',
-                    render: function ( data, type, row ) {
-                        if ( type === \'display\' || type === \'filter\' ) {
-                            var m = moment.tz(data, activeInfo.timezone);
-                            return moment(m).format(\'LLL\');
-                        }
-                        return data;
-                    }
-                },
-                { "data": "username" },
-                { "data": "ip" },
-                { data: \'auth_type\',
-                    render: function ( data, type, row ) {
-                        if ( type === \'display\' || type === \'filter\' ) {
-                            return logIcon(data);
-                        }
-                        return logIcon(data);
-                    }
-                }
-            ],
-            "order": [[ 0, \'desc\' ]],
-    } );
-    $("#organizrLogTable").DataTable( {
-            "ajax": "api/?v1/organizr_log",
-                "columns": [
-                { data: \'utc_date\',
-                    render: function ( data, type, row ) {
-                        // If display or filter data is requested, format the date
-                        if ( type === \'display\' || type === \'filter\' ) {
-                            var m = moment.tz(data, activeInfo.timezone);
-                            return moment(m).format(\'LLL\');
-                        }
-
-                    // Otherwise the data type requested (`type`) is type detection or
-                    // sorting data, for which we want to use the integer, so just return
-                    // that, unaltered
-                    return data;}
-                    },
-                { "data": "username" },
-                { "data": "ip" },
-                { "data": "message" },
-                { data: \'type\',
-                    render: function ( data, type, row ) {
-                        if ( type === \'display\' || type === \'filter\' ) {
-                            return logIcon(data);
-                        }
-                        return logIcon(data);
-                    }
-                }
-            ],
-            "order": [[ 0, \'desc\' ]],
-    } );
-    </script>
-    ';
+$GLOBALS['organizrPages'][] = 'settings_settings_logs';
+function get_page_settings_settings_logs($Organizr)
+{
+	if (!$Organizr) {
+		$Organizr = new Organizr();
+	}
+	if ((!$Organizr->hasDB())) {
+		return false;
+	}
+	if (!$Organizr->qualifyRequest(1, true)) {
+		return false;
+	}
+	$logsDropdown = $Organizr->buildLogDropdown();
+	$filterDropdown = $Organizr->buildFilterDropdown();
+	return '
+	<div class="btn-group m-b-20 pull-left">' . $logsDropdown . '</div>
+	<button class="btn btn-danger waves-effect waves-light pull-right purgeLog" type="button" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Purge Log"><i class="fa fa-trash"></i></button>
+	<button onclick="shortcut(\'log-settings\')" class="btn btn-inverse waves-effect waves-light pull-right m-r-5" type="button" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Log Settings"><i class="fa fa-cog"></i></button>
+	<button onclick="exportLogs()" class="btn btn-success waves-effect waves-light pull-right m-r-5" type="button" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Export Logs"><i class="fa fa-download"></i></button>
+	<button onclick="organizrLogTable.clear().draw().ajax.reload(null, false)" class="btn btn-info waves-effect waves-light pull-right reloadLog m-r-5" type="button" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Reload Log"><i class="fa fa-refresh"></i></button>
+	<button onclick="toggleKillOrganizrLiveUpdate(' . $Organizr->config['logLiveUpdateRefresh'] . ');" class="btn btn-primary waves-effect waves-light pull-right organizr-log-live-update m-r-5" type="button" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="Live Update"><i class="fa fa-clock-o"></i></button>
+	' . $filterDropdown . '
+	<div class="clearfix"></div>
+	<div class="white-box bg-org logTable orgLogDiv">
+		<h3 class="box-title m-b-0" lang="en">Organizr Logs</h3>
+		<div class="table-responsive">
+			<table id="organizrLogTable" class="table table-striped compact nowrap">
+				<thead>
+					<tr>
+						<th lang="en">Date</th>
+						<th lang="en">Severity</th>
+						<th lang="en">Function</th>
+						<th lang="en">Message</th>
+						<th lang="en">IP Address</th>
+						<th lang="en">User</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			</table>
+		</div>
+	</div>
+	<!-- /.container-fluid -->
+	<script>
+	clearTimeout(timeouts[\'organizr-log\']);
+	$.fn.dataTable.ext.errMode = "none";
+	var organizrLogTable = $("#organizrLogTable")
+	.on("error.dt", function(e, settings, techNote, message) {
+		console.log("An error has been reported by DataTables: ", message);
+		organizrLogTable.draw();
+	})
+	.DataTable({
+		"ajax": {
+			"url": "api/v2/log/0?filter=NONE&pageSize=1000&offset=0",
+			"dataSrc": function(json) {
+				return json.response.data.results;
+			}
+		},
+		"deferRender": true,
+		"pageLength": ' . (int)$Organizr->config['logPageSize'] . ',
+		"columns": [{
+			data: "datetime",
+			render: function(data, type, row) {
+				if (type === "display" || type === "filter") {
+					var m = moment.tz(data + "Z", activeInfo.timezone);
+					return moment(m).format("LLL");
+				}
+				return data;
+			}
+		}, {
+			data: "log_level",
+			render: function(data, type, row) {
+				if (type === "display" || type === "filter") {
+					return logIcon(data);
+				}
+				return logIcon(data);
+			}
+		}, {
+			data: "channel"
+		}, {
+			data: "message"
+		}, {
+			data: "remote_ip_address",
+			"width": "5%",
+			render: function(data, type, row) {
+				return ipInfoSpan(data);
+			}
+		}, {
+			"data": "username"
+		}, {
+			data: "context",
+			render: function(data, type, row) {
+				return logContext(row);
+			},
+			orderable: false
+		}, ],
+		"order": [
+			[0, "desc"]
+		],
+	})
+	</script>
+	';
 }

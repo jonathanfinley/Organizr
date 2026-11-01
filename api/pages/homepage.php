@@ -1,6 +1,14 @@
 <?php
-if (file_exists('config' . DIRECTORY_SEPARATOR . 'config.php')) {
-	$pageHomepage = '
+$GLOBALS['organizrPages'][] = 'homepage';
+function get_page_homepage($Organizr = null)
+{
+	if (!$Organizr) {
+		$Organizr = new Organizr();
+	}
+	if ((!$Organizr->hasDB())) {
+		return false;
+	}
+	return '
 <script>
 !function($) {
     "use strict";
@@ -26,11 +34,12 @@ if (file_exists('config' . DIRECTORY_SEPARATOR . 'config.php')) {
 
         var $this = this;
         $this.$calendarObj = $this.$calendar.fullCalendar({
+        	locale: "' . $Organizr->config['calendarLocale'] . '",
         	customButtons: {
 			    filterCalendar: {
 			      text: \'Filter\',
 			      click: function() {
-			        $(\'#calendar-filter-modal\').modal(\'show\');
+			        toggleCalendarFilter();
 			      },
 			      //icon: \'x\'
 			    },
@@ -41,9 +50,9 @@ if (file_exists('config' . DIRECTORY_SEPARATOR . 'config.php')) {
 			      }
 			    }
 			  },
-            defaultView: (activeInfo.mobile) ? "list" : "' . $GLOBALS['calendarDefault'] . '",
-            firstDay: "' . $GLOBALS['calendarFirstDay'] . '",
-            timeFormat: "' . $GLOBALS['calendarTimeFormat'] . '",
+            defaultView: (activeInfo.mobile) ? "list" : "' . $Organizr->config['calendarDefault'] . '",
+            firstDay: "' . $Organizr->config['calendarFirstDay'] . '",
+            timeFormat: "' . $Organizr->config['calendarTimeFormat'] . '",
             handleWindowResize: true,
             header: {
                left: "prev,next,today",
@@ -51,9 +60,9 @@ if (file_exists('config' . DIRECTORY_SEPARATOR . 'config.php')) {
                right: (activeInfo.mobile) ? "refreshCalendar,filterCalendar" : "refreshCalendar,filterCalendar,month,basicWeek,basicDay,list",
             },
             views: {
-               basicDay: { buttonText: window.lang.translate("Day"), eventLimit: ' . $GLOBALS['calendarLimit'] . ' },
-               basicWeek: { buttonText: window.lang.translate("Week"), eventLimit: ' . $GLOBALS['calendarLimit'] . ' },
-               month: { buttonText: window.lang.translate("Month"), eventLimit: ' . $GLOBALS['calendarLimit'] . ' },
+               basicDay: { buttonText: window.lang.translate("Day"), eventLimit: ' . $Organizr->config['calendarLimit'] . ' },
+               basicWeek: { buttonText: window.lang.translate("Week"), eventLimit: ' . $Organizr->config['calendarLimit'] . ' },
+               month: { buttonText: window.lang.translate("Month"), eventLimit: ' . $Organizr->config['calendarLimit'] . ' },
                list: { buttonText: window.lang.translate("List"), duration: {days: 15} },
             },
             timezone: "local",
@@ -87,50 +96,15 @@ function($) {
     "use strict";
     $.CalendarApp.init()
 }(window.jQuery);
+$(".homepage-loading-box").fadeOut(5000);
 </script>
 <div class="container-fluid p-t-30" id="homepage-items">
-    ' . buildHomepage() . '
+    ' . $Organizr->buildHomepage() . '
 </div>
 <div id="open-youtube" class="white-popup mfp-with-anim mfp-hide">
     <div class="col-md-8 col-md-offset-2 youtube-div">  </div>
 </div>
 <!-- /.container-fluid -->
-<!--  modal content -->
-<div id="calendar-filter-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true" style="display: none;">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                <h4 class="modal-title" id="mySmallModalLabel" lane="en">Filter Calendar</h4> </div>
-            <div class="modal-body">
-            	<div class="row">
-                    
-                    <div class="col-md-12">
-                        <label class="control-label" lang="en">Choose Media Type</label>
-                        <select class="form-control form-white" data-placeholder="Choose media type" id="choose-calender-filter">
-                            <option value="all" lang="en">All</option>
-                            <option value="tv" lang="en">TV</option>
-                            <option value="film" lang="en">Movie</option>
-                            <option value="music" lang="en">Music</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="control-label" lang="en">Choose Media Status</label>
-                        <select class="form-control form-white" data-placeholder="Choose media status" id="choose-calender-filter-status">
-                            <option value="all" lang="en">All</option>
-                            <option value="text-success" lang="en">Downloaded</option>
-                            <option value="text-info" lang="en">Unaired</option>
-                            <option value="text-danger" lang="en">Missing</option>
-                            <option value="text-primary animated flash" lang="en">Premier</option>
-                        </select>
-                    </div>
-                </div>
-			</div>
-        </div>
-        <!-- /.modal-content -->
-    </div>
-    <!-- /.modal-dialog -->
-</div>
-<!-- /.modal -->
+
 ';
 }

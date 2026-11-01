@@ -1,5 +1,6 @@
 /*!
  * FullCalendar v3.2.0
+ *
  * Docs & License: https://fullcalendar.io/
  * (c) 2017 Adam Shaw
  */
@@ -6649,11 +6650,7 @@ DayGrid.mixin({
 		var timeText;
 		var titleHtml;
 		var urlMeta = event.id ? htmlEscape(event.id) : 'none';
-		var metadata = `
-		<div id="`+urlMeta+`" class="white-popup mfp-with-anim mfp-hide">
-	        <div class="col-md-8 col-md-offset-2 `+urlMeta+`-metadata-info"></div>
-	    </div>
-		`;
+		var metadata = '<div id="'+urlMeta+'" class="white-popup mfp-with-anim mfp-hide"><div class="col-md-8 col-md-offset-2 '+urlMeta+'-metadata-info"></div></div>';
 		var detailsJSON = JSON.stringify(event.details);
 		classes.unshift('fc-day-grid-event', 'fc-h-event');
 
@@ -9938,7 +9935,7 @@ var Scroller = FC.Scroller = Class.extend({
 
 
 	renderEl: function() {
-		return (this.scrollEl = $('<div style="ovnerflow:auto !important" class="fc-scroller" data-simplebar data-simplebar-force-enabled="true" data-simplebar-autohide="false" ></div>'));
+		return (this.scrollEl = $('<div style="ovnerflow:auto !important" class="fc-scroller"></div>'));
 	},
 
 
@@ -11013,6 +11010,8 @@ function Calendar_constructor(element, overrides) {
 
 		ignoreWindowResize--;
 		inlineLoad();
+
+		$('.fc-scroller').overlayScrollbars({ scrollbars : { autoHide: "leave"}});
 	}
 
 
@@ -11235,14 +11234,15 @@ function Calendar_constructor(element, overrides) {
 	function prev() {
 		date = currentView.computePrevDate(date);
 		renderView();
-        new SimpleBar($('.fc-scroller')[0]);
+		$('.fc-scroller').overlayScrollbars({ scrollbars : { autoHide: "leave"}});
+
 	}
 
 
 	function next() {
 		date = currentView.computeNextDate(date);
 		renderView();
-        new SimpleBar($('.fc-scroller')[0]);
+		$('.fc-scroller').overlayScrollbars({ scrollbars : { autoHide: "leave"}});
 	}
 
 
@@ -14545,11 +14545,7 @@ var ListViewGrid = Grid.extend({
 		var timeText;
 		var titleHtml;
 		var urlMeta = event.id ? htmlEscape(event.id) : 'none';
-		var metadata = `
-		<div id="`+urlMeta+`" class="white-popup mfp-with-anim mfp-hide">
-	        <div class="col-md-8 col-md-offset-2 `+urlMeta+`-metadata-info"></div>
-	    </div>
-		`;
+		var metadata = '<div id="'+urlMeta+'" class="white-popup mfp-with-anim mfp-hide"><div class="col-md-8 col-md-offset-2 '+urlMeta+'-metadata-info"></div></div>';
 		var detailsJSON = JSON.stringify(event.details);
 		classes.unshift('fc-day-grid-event', 'fc-h-event');
 
@@ -14564,8 +14560,29 @@ var ListViewGrid = Grid.extend({
 		}
 		titleHtml =
 			'<span class="fc-title">' +
-				(htmlEscape(event.title || '') || '&nbsp;') + // we always want one line of height
+			(htmlEscape(event.title || '') || '&nbsp;') + // we always want one line of height
 			'</span>';
+		switch(event.imagetypeFilter){
+			case 'tv':
+				titleHtml = titleHtml + '<br/><small class="fc-title m-l-5">' +
+					(htmlEscape(event.details.bottomTitle || '') || '&nbsp;') + // we always want one line of height
+					'</small>';
+				break;
+			case 'music':
+				titleHtml = titleHtml + '<br/><small class="fc-title m-l-5">' +
+					(htmlEscape(event.details.topTitle || '') || '&nbsp;') + // we always want one line of height
+					'</small>';
+				break;
+			case 'film':
+				titleHtml = titleHtml + '<br/><small class="fc-title m-l-5">' +
+					(htmlEscape(event.details.studio || '') || '&nbsp;') + // we always want one line of height
+					'</small>';
+				break;
+			default:
+				titleHtml = titleHtml + '<br/><small class="fc-title m-l-5">' +
+					(htmlEscape('' || '') || '&nbsp;') + // we always want one line of height
+					'</small>';
+		}
         imageHtml =
 			'<span class="fc-status '+ event.bgColor +'"></span><span class="fc-image"><i class="fa fa-' +
 				(htmlEscape(event.imagetype || '') || '&nbsp;') + // we always want one line of height

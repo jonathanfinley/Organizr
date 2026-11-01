@@ -7,20 +7,22 @@ use Adldap\Schemas\ActiveDirectory;
 use Adldap\Schemas\SchemaInterface;
 
 /**
- * Class Factory
+ * Class Factory.
  *
- * Constructs and scopes LDAP queries.
- *
- * @package Adldap\Models
+ * Creates new LDAP models.
  */
 class Factory
 {
     /**
+     * The LDAP query builder.
+     *
      * @var Builder
      */
     protected $query;
 
     /**
+     * The LDAP schema.
+     *
      * @var SchemaInterface
      */
     protected $schema;
@@ -53,6 +55,8 @@ class Factory
     /**
      * Sets the current schema.
      *
+     * If null is given, a default ActiveDirectory schema is set.
+     *
      * @param SchemaInterface|null $schema
      *
      * @return $this
@@ -75,7 +79,7 @@ class Factory
     {
         $model = $this->schema->entryModel();
 
-        return (new $model($attributes, $this->query));
+        return new $model($attributes, $this->query);
     }
 
     /**
@@ -90,12 +94,7 @@ class Factory
         $model = $this->schema->userModel();
 
         return (new $model($attributes, $this->query))
-            ->setAttribute($this->schema->objectClass(), [
-                $this->schema->top(),
-                $this->schema->person(),
-                $this->schema->organizationalPerson(),
-                $this->schema->objectClassUser(),
-            ]);
+            ->setAttribute($this->schema->objectClass(), $this->schema->userObjectClasses());
     }
 
     /**
@@ -113,6 +112,24 @@ class Factory
             ->setAttribute($this->schema->objectClass(), [
                 $this->schema->top(),
                 $this->schema->organizationalUnit(),
+            ]);
+    }
+
+    /**
+     * Creates a new organizational unit instance.
+     *
+     * @param array $attributes
+     *
+     * @return Organization
+     */
+    public function organization(array $attributes = [])
+    {
+        $model = $this->schema->organizationModel();
+
+        return (new $model($attributes, $this->query))
+            ->setAttribute($this->schema->objectClass(), [
+                $this->schema->top(),
+                $this->schema->organization(),
             ]);
     }
 
@@ -146,7 +163,7 @@ class Factory
         $model = $this->schema->containerModel();
 
         return (new $model($attributes, $this->query))
-            ->setAttribute($this->schema->objectClass(), $this->schema->organizationalUnit());
+            ->setAttribute($this->schema->objectClass(), $this->schema->objectClassContainer());
     }
 
     /**

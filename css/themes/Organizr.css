@@ -190,11 +190,6 @@ input,
 .no-bg-addon .input-group-addon {
   background-color: #1f1f1f;
 }
-.panel-blue .panel-heading, .panel-info .panel-heading {
-  border-color: #2cabe3;
-  color: #fff;
-  background-color: #232323;
-}
 .bg-title .breadcrumb .active {
   color: #e6d086;
 }
@@ -298,7 +293,7 @@ a.mytooltip {
   height: 100%;
   position: fixed;
   display: none;
-  z-index: 10;
+  z-index: 11;
 }
 .error-body h1 {
   font-size: 210px;
@@ -315,7 +310,7 @@ a.mytooltip {
   background-color: #1f1f1f!important;
 }
 .asColorPicker-dropdown, .checkbox label::before, .clockpicker-popover .popover-content, .clockpicker-popover .popover-title, .customvtab .tabs-vertical li.active a, .customvtab .tabs-vertical li.active a:focus, .customvtab .tabs-vertical li.active a:hover, .dropdown-menu, .fc-day, .footable-row-detail, .img-thumbnail, .input-group-addon, .jsgrid-filter-row>td, .jsgrid-header-sortable:hover, .nav-tabs>li>a:focus, .nav-tabs>li>a:hover, .pager .disabled>a, .pager .disabled>a:focus, .pager .disabled>a:hover, .pager .disabled>span, .pager li>a:focus, .pager li>a:hover, .pagination>.disabled>a, .pagination>.disabled>a:focus, .pagination>.disabled>a:hover, .pagination>.disabled>span, .pagination>.disabled>span:focus, .pagination>.disabled>span:hover, .popover, .popover-title, .right-sidebar, code, table.dataTable tbody tr {
-  background: #1b1b1b;
+  background: #111;
 }
 .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th {
   padding: 8px;
@@ -360,4 +355,11 @@ span.select2-results {
 }
 .select2-container--default .select2-results__option[aria-selected=true] {
     background-color: #232323;
+}
+#organizrNewsPanel .panel-body {
+    background: #2d2c2c;
+}
+.nav>li>a:focus, .nav>li>a:hover {
+    text-decoration: none;
+    background-color: #191919;
 }

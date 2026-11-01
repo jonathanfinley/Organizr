@@ -57,10 +57,10 @@ php_errors.log
 # Backup Files
 .pydio_id
 
-.idea/*
 # =========================
 # Organizr files
 # =========================
+organizr-*.log
 databaseLocation.ini.php
 homepageSettings.ini.php
 loginLog.json
@@ -72,10 +72,16 @@ test.php
 users.db
 speedtest.db
 chatpack.db
+api.json
+Cron.txt
 Docker.txt
 Github.txt
 Demo.txt
+DemoTest.txt
+Dev.txt
+updateInProgress.txt
 config/cacert.pem
+config/custom.pem
 config/config.php
 config/config*.bak.php
 config/users/
@@ -83,17 +89,18 @@ config/users
 config/users*.db
 config/users*.bak.db
 config/tmp/*
+data/*
+data/config/*
+docs/api.json
 images/cache/*
 backups/*
 backups/
 backups
-test*.php
 tracy/
 logs/
 debug.php
 OrganizrV2/*
 orgv2/*
-test.php
 test/*
 organizrLoginLog.json
 organizrLog.json
@@ -101,6 +108,7 @@ api/config/config*
 upgrade/*
 api/upgrade*
 api/functions/cert/cacert.pem
+api/functions/cert/custom.pem
 wallpaper.jpg
 strings.json
 css/themes/*.css
@@ -115,6 +123,12 @@ plugins/theme_files/*
 plugins/plugin_files/*
 !plugins/theme_files/index.html
 !plugins/plugin_files/index.html
+plugins/images/userTabs/*
+!plugins/images/userTabs/index.html
+plugins/images/faviconCustom/*
+!plugins/images/faviconCustom/placeFavIconsHere.txt
+api/v2/routes/custom/*
+!api/v2/routes/custom/index.html
 # =========================
 # Plugin files
 # =========================
@@ -127,6 +141,11 @@ api/plugins/*
 !api/plugins/api/chat.php
 !api/plugins/config/chat.php
 !api/plugins/js/chat.js
+!api/plugins/healthChecks.php
+!api/plugins/api/healthChecks.php
+!api/plugins/config/healthChecks.php
+!api/plugins/js/healthChecks.js
+!api/plugins/js/healthChecks-settings.js
 !api/plugins/php-mailer.php
 !api/plugins/api/php-mailer.php
 !api/plugins/config/php-mailer.php
@@ -138,6 +157,7 @@ api/plugins/*
 !api/plugins/misc/emailTemplates/default.php
 !api/plugins/misc/emailTemplates/gray.php
 !api/plugins/misc/emailTemplates/light.php
+!api/plugins/misc/emailTemplates/dark.php
 !api/plugins/misc/emailTemplates/plehex.php
 !api/plugins/misc/speedTest/empty.php
 !api/plugins/misc/speedTest/garbage.php
@@ -145,8 +165,30 @@ api/plugins/*
 !api/plugins/misc/speedTest/telemetry.php
 !api/plugins/misc/speedTest/telemetry_settings.php
 !api/plugins/misc/speedTest/speedtest_worker.min.js
+!api/plugins/bookmark.php
+!api/plugins/api/bookmark.php
+!api/plugins/config/bookmark.php
+!api/plugins/js/bookmark-settings.js
+!api/plugins/css/bookmark.css
+!api/plugins/bookmark/
+!api/plugins/chat/
+!api/plugins/healthChecks/
+!api/plugins/invites/
+!api/plugins/php-mailer/
+!api/plugins/speedTest/
+!api/plugins/shuck-stop/
+api/plugins/shuck-stop/drives.json
 
 # =========================
 # Custom files
 # =========================
 api/pages/custom/*.php
+/plugins/images/tabs/eatsleep.jpg
+/plugins/images/cache/tautulli-show.svg
+/plugins/images/cache/tautulli-android.svg
+/plugins/images/cache/tautulli-artist.svg
+/plugins/images/cache/tautulli-movie.svg
+/plugins/images/cache/tautulli-windows.svg
+/plugins/images/cache/tautulli-samsung.svg
+/plugins/images/cache/tautulli-chrome.svg
+.vscode

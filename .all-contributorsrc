@@ -1,0 +1,39 @@
+{
+  "projectName": "Organizr",
+  "projectOwner": "causefx",
+  "files": [
+    "README.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "tronyx",
+      "name": "Chris Yocum",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22502007?v=4",
+      "profile": "https://tronflix.app",
+      "contributions": [
+        "test"
+      ]
+    },
+    {
+      "login": "Roxedus",
+      "name": "Roxedus",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7110194?v=4",
+      "profile": "http://roxedus.dev",
+      "contributions": [
+        "test"
+      ]
+    },
+    {
+      "login": "HalianElf",
+      "name": "HalianElf",
+      "avatar_url": "https://avatars.githubusercontent.com/u/28244771?v=4",
+      "profile": "https://github.com/HalianElf",
+      "contributions": [
+        "test"
+      ]
+    }
+  ]
+}
